@@ -22,10 +22,10 @@ wheels/
 .venv
 env/
 venv/
+myenv/
 ENV/
 certificates/*.crt
 certificates/*.key
 certificates/*.pem
 !certificates/.gitkeep
-config.json
 *.log
