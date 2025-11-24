@@ -24,12 +24,52 @@ class VPNClientCore:
         self.tun_fd, self.tun_name = create_tun('tun0')
     
     def _configure_tun_interface(self):
+        import subprocess
+
         if not self.assigned_ip:
             raise RuntimeError('No IP assigned')
-        
-        subprocess.run(['ip', 'addr', 'add', f'{self.assigned_ip}/24', 'dev', self.tun_name], check=True)
-        subprocess.run(['ip', 'link', 'set', 'dev', self.tun_name, 'up'], check=True)
-        subprocess.run(['ip', 'route', 'add', '10.0.0.0/24', 'dev', self.tun_name], check=True)
+
+        # Add IP address
+        try:
+            subprocess.run(
+                ['ip', 'addr', 'add', f'{self.assigned_ip}/24', 'dev', self.tun_name],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            if "File exists" in str(e):
+                print(f"[Warning] IP {self.assigned_ip} already assigned to {self.tun_name}")
+            else:
+                print(f"[Error] Failed to assign IP: {e}")
+                raise
+
+        # Bring interface up
+        try:
+            subprocess.run(
+                ['ip', 'link', 'set', 'dev', self.tun_name, 'up'],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"[Error] Failed to bring interface up: {e}")
+            raise
+
+        # Add VPN route
+        try:
+            # Delete old route first (safe)
+            subprocess.run(
+                ['ip', 'route', 'del', '10.0.0.0/24', 'dev', self.tun_name],
+                check=False
+            )
+            subprocess.run(
+                ['ip', 'route', 'add', '10.0.0.0/24', 'dev', self.tun_name],
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            if "File exists" in str(e):
+                print(f"[Warning] Route 10.0.0.0/24 already exists")
+            else:
+                print(f"[Error] Failed to add VPN route: {e}")
+                raise
+
     
     def _connect_to_server(self):
         self.ssl_context = create_ssl_context()
