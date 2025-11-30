@@ -29,3 +29,5 @@ certificates/*.key
 certificates/*.pem
 !certificates/.gitkeep
 *.log
+project.md
+*.pdf
